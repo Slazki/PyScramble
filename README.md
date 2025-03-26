@@ -9,6 +9,10 @@ PyScramble is a Python code obfuscator with:
 - CLI support
 - Local pip install option
 
+--
+
+To obfuscate what you want open the examples folder and open "sample_input.py" and paste your code in there and then go back to the main folder and run the CLI or the GUI version to obfuscate the code into "sample_output." Now you can open "sample_output" to view your obfuscated code!
+
 ## Install Locally
 
 ```bash
