@@ -18,7 +18,7 @@ pip install .
 ## CLI Usage
 
 ```bash
-pyscramble --input script.py --output script_obf.py --encrypt-strings --inject-dummy
+python obfuscator.py --input examples/sample_input.py --output examples/sample_output.py --encrypt-strings --inject-dummy
 ```
 
 ## GUI

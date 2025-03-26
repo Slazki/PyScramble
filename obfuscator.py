@@ -43,6 +43,9 @@ class Obfuscator(ast.NodeTransformer):
 
     def visit_Constant(self, node):
         if self.encrypt_strings and isinstance(node.value, str):
+            # Don't encrypt f-strings (JoinedStr will call this)
+            if hasattr(node, 'parent') and isinstance(node.parent, ast.JoinedStr):
+                return node
             encoded = self._encode_string(node.value)
             call = ast.Call(
                 func=ast.Name(id=self.decryption_func_name, ctx=ast.Load()),
@@ -52,10 +55,15 @@ class Obfuscator(ast.NodeTransformer):
             return ast.copy_location(call, node)
         return node
 
+    def visit_JoinedStr(self, node):
+        for value in node.values:
+            if isinstance(value, ast.Constant):
+                value.parent = node
+        return self.generic_visit(node)
+
     def add_decryption_function(self):
         if not self.encrypt_strings or self.decryption_func_added:
             return []
-
         self.decryption_func_added = True
         decryption_code = f"""
 import base64
@@ -70,6 +78,12 @@ def obfuscate_file(input_file, output_file, encrypt_strings=False, inject_dummy=
         source = f.read()
 
     tree = ast.parse(source)
+
+    # Set parent attributes manually
+    for node in ast.walk(tree):
+        for child in ast.iter_child_nodes(node):
+            child.parent = node
+
     obfuscator = Obfuscator(encrypt_strings=encrypt_strings, inject_dummy=inject_dummy)
     tree = obfuscator.visit(tree)
     ast.fix_missing_locations(tree)
@@ -78,7 +92,11 @@ def obfuscate_file(input_file, output_file, encrypt_strings=False, inject_dummy=
         decrypt_nodes = obfuscator.add_decryption_function()
         tree.body = decrypt_nodes + tree.body
 
-    obfuscated_code = ast.unparse(tree)
+    try:
+        obfuscated_code = ast.unparse(tree)
+    except AttributeError:
+        import astor
+        obfuscated_code = astor.to_source(tree)
 
     with open(output_file, 'w') as f:
         f.write(obfuscated_code)
